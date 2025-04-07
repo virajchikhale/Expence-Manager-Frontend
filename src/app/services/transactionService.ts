@@ -2,7 +2,8 @@
 import axios from 'axios';
 import { Transaction } from '../../types/Transaction';
 
-const API_BASE_URL = 'http://localhost:8000/api'; // Adjust to your FastAPI server URL
+const API_BASE_URL =  process.env.NEXT_PUBLIC_API_URL;
+console.log(API_BASE_URL)
 
 export const transactionService = {
   async getTransactions(limit = 10): Promise<Transaction[]> {
