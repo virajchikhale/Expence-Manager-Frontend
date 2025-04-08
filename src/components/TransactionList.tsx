@@ -9,7 +9,6 @@ interface TransactionListProps {
 
 
 const TransactionList: React.FC<TransactionListProps> = ({ transactions }) => {
-  console.log(transactions)
   
   return (
     <div className="overflow-x-auto">
@@ -17,10 +16,11 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions }) => {
         <thead className="bg-gray-100">
           <tr>
             <th className="p-3 text-left">Date</th>
-            <th className="p-3 text-left">Description</th>
             <th className="p-3 text-left">Amount</th>
-            <th className="p-3 text-left">Type</th>
+            <th className="p-3 text-left">Description</th>
             <th className="p-3 text-left">Category</th>
+            <th className="p-3 text-left">Paid By</th>
+            <th className="p-3 text-left">Type</th>
             <th className="p-3 text-left">Account</th>
             <th className="p-3 text-left">Status</th>
           </tr>
@@ -29,7 +29,6 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions }) => {
           {(transactions || []).map((transaction, index) => (
             <tr key={index} className="border-b hover:bg-gray-50">
               <td className="p-3">{transaction.date}</td>
-              <td className="p-3">{transaction.description}</td>
               <td className="p-3">
                 <span className={
                   transaction.type === 'Credit' 
@@ -39,8 +38,10 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions }) => {
                   {transaction.amount}
                 </span>
               </td>
-              <td className="p-3">{transaction.type}</td>
+              <td className="p-3">{transaction.description}</td>
               <td className="p-3">{transaction.category}</td>
+              <td className="p-3">{transaction.paid_by}</td>
+              <td className="p-3">{transaction.type}</td>
               <td className="p-3">{transaction.account}</td>
               <td className="p-3">{transaction.status}</td>
             </tr>

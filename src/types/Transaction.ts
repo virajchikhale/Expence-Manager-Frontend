@@ -7,7 +7,7 @@ export interface Transaction {
     type: 'Debit' | 'Credit' | 'Transferred';
     category: string;
     account: string;
-    toaccount?: string;
-    paidBy: string;
+    to_account?: string;
+    paid_by: string;
     status: string;
   }

@@ -3,7 +3,6 @@ import axios from 'axios';
 import { Transaction } from '../../types/Transaction';
 
 const API_BASE_URL =  process.env.NEXT_PUBLIC_API_URL;
-console.log(API_BASE_URL)
 
 export const transactionService = {
   async getTransactions(limit = 10): Promise<Transaction[]> {
@@ -20,6 +19,7 @@ export const transactionService = {
 
   async addTransaction(transaction: Transaction) {
     try {
+      console.log(transaction)
       const response = await axios.post(`${API_BASE_URL}/transactions`, transaction);
       return response.data;
     } catch (error) {
