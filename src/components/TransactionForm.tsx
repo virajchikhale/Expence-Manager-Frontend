@@ -42,7 +42,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit }) => {
       account: 'Maha',
       paid_by: '',
       status: '',
-      to_account: 'None',
+      to_account: '',
     });
   };
 
