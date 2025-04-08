@@ -171,12 +171,12 @@ export default function Home() {
           { 
             icon: <TrendingUp className="text-green-500" />, 
             title: 'Total Income', 
-            value: `$${calculateTotalIncome().toFixed(2)}` 
+            value: `₹${calculateTotalIncome().toFixed(2)}` 
           },
           { 
             icon: <TrendingDown className="text-red-500" />, 
             title: 'Total Expenses', 
-            value: `$${calculateTotalExpenses().toFixed(2)}` 
+            value: `₹${calculateTotalExpenses().toFixed(2)}` 
           },
           { 
             icon: <PiggyBank className="text-blue-500" />, 
@@ -212,7 +212,7 @@ export default function Home() {
               Object.entries(spendingByCategory).map(([category, amount]) => (
                 <div key={category} className="flex justify-between mb-2 hover:bg-gray-100 p-2 rounded">
                   <span>{category}</span>
-                  <span className="text-red-600 font-bold">${amount.toFixed(2)}</span>
+                  <span className="text-red-600 font-bold">₹{amount.toFixed(2)}</span>
                 </div>
               ))
             ) : (

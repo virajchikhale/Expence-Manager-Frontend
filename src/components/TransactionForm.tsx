@@ -14,7 +14,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit }) => {
     amount: 0,
     type: 'Debit',
     category: '',
-    account: 'None',
+    account: 'Reimburse',
     paid_by: 'Self',
     status: 'Paid',
     to_account: 'None',
