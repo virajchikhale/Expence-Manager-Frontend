@@ -1,258 +1,69 @@
-// src/app/page.tsx
-'use client';
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  PiggyBank, 
-  ChartPie, 
-  Banknote,
-  AlertTriangle 
-} from 'lucide-react';
-import TransactionForm from '../components/TransactionForm';
-import TransactionList from '../components/TransactionList';
-import AccountBalances from '../components/AccountBalances';
-import { Transaction } from '../types/Transaction';
-import { transactionService } from './services/transactionService';
-import AddTransactionDialog from "../components/AddTransactionDialog";
-import AccountBalancesDialog from "../components/AccountBalancesDialog";
-
+import Link from 'next/link'
+import { DollarSign, TrendingUp, Shield, BarChart3 } from 'lucide-react'
 
 export default function Home() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [balances, setBalances] = useState<{[key: string]: number}>({});
-  const [spendingByCategory, setSpendingByCategory] = useState<{[key: string]: number}>({});
-  const [categoryChart, setCategoryChart] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  
-  // Error state
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Reset previous errors
-        setError(null);
-        setLoading(true);
-
-        // Fetch all data concurrently for better performance
-        const [
-          fetchedTransactions,
-          fetchedBalances,
-          fetchedSpending,
-          chart
-        ] = await Promise.all([
-          transactionService.getTransactions(),
-          transactionService.getBalances(),
-          transactionService.getSpendingByCategory(),
-          transactionService.getCategoryChart().catch(() => null) // Make chart optional
-        ]);
-
-        setTransactions(fetchedTransactions);
-        setBalances(fetchedBalances);
-        setSpendingByCategory(fetchedSpending);
-        setCategoryChart(chart);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setError('Failed to fetch data. Please check your connection.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleAddTransaction = async (newTransaction: Transaction) => {
-    try {
-      await transactionService.addTransaction(newTransaction);
-      
-      // Refresh data after adding a transaction
-      const [
-        fetchedTransactions,
-        fetchedBalances,
-        fetchedSpending
-      ] = await Promise.all([
-        transactionService.getTransactions(),
-        transactionService.getBalances(),
-        transactionService.getSpendingByCategory()
-      ]);
-      
-      setTransactions(fetchedTransactions);
-      setBalances(fetchedBalances);
-      setSpendingByCategory(fetchedSpending);
-    } catch (error) {
-      console.error('Failed to add transaction:', error);
-      setError('Failed to add transaction. Please try again.');
-    }
-  };
-
-  const calculateTotalExpenses = () => {
-    return transactions
-      .filter(t => t.type === 'Debit')
-      .reduce((sum, transaction) => sum + transaction.amount, 0);
-  };
-
-  const calculateTotalIncome = () => {
-    return transactions
-      .filter(t => t.type === 'Credit')
-      .reduce((sum, transaction) => sum + transaction.amount, 0);
-  };
-
-  const getFinancialMood = () => {
-    const netBalance = calculateTotalIncome() - calculateTotalExpenses();
-    if (netBalance > 5000) return '🎉 Awesome Financial Health!';
-    if (netBalance > 0) return '😊 Good Job Saving!';
-    if (netBalance === 0) return '🤔 Breaking Even';
-    return '😰 Time to Budget Carefully!';
-  };
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6 flex justify-center items-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-700 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600">Loading your financial data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="container mx-auto p-6 flex justify-center items-center h-screen">
-        <motion.div 
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-red-50 p-8 rounded-xl shadow-lg text-center"
-        >
-          <AlertTriangle className="mx-auto text-red-500 mb-4" size={64} />
-          <h2 className="text-2xl font-bold text-red-700 mb-4">Oops! Something went wrong</h2>
-          <p className="text-red-600 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-          >
-            Retry
-          </button>
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto p-6 bg-gradient-to-br from-blue-50 to-white">
-      <motion.h1 
-        initial={{ opacity: 0, y: -50 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-4xl font-bold mb-6 text-center text-blue-800"
-      >
-        💰 Financial Tracker Pro
-      </motion.h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div 
-            className="bg-white p-6 rounded-xl shadow-md flex  justify-center items-center space-x-4 mb-6"
-          >
-          <AddTransactionDialog  onSubmit={handleAddTransaction}/>
-          </div>
-          <div 
-            className="bg-white p-6 rounded-xl shadow-md flex  justify-center items-center space-x-4 mb-6"
-          >
-          <AccountBalancesDialog  balances={balances}/>    
-          </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {[
-          { 
-            icon: <TrendingUp className="text-green-500" />, 
-            title: 'Total Income', 
-            value: `₹${calculateTotalIncome().toFixed(2)}` 
-          },
-          { 
-            icon: <TrendingDown className="text-red-500" />, 
-            title: 'Total Expenses', 
-            value: `₹${calculateTotalExpenses().toFixed(2)}` 
-          },
-          { 
-            icon: <PiggyBank className="text-blue-500" />, 
-            title: 'Financial Mood', 
-            value: getFinancialMood() 
-          }
-        ].map((card, index) => (
-          <motion.div 
-            key={index}
-            whileHover={{ scale: 1.05 }}
-            className="bg-white p-6 rounded-xl shadow-md flex items-center space-x-4"
-          >
-            {card.icon}
-            <div>
-              <h3 className="text-gray-500">{card.title}</h3>
-              <p className="text-2xl font-bold">{card.value}</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center">
+              <DollarSign className="h-8 w-8 text-indigo-600" />
+              <span className="ml-2 text-xl font-bold text-gray-900">Finance Manager</span>
             </div>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <motion.div
-          initial={{ x: -100, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <h2 className="text-2xl font-bold mb-4 flex items-center">
-            <ChartPie className="mr-2 text-orange-500" /> Spending Breakdown
-          </h2>
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            {Object.entries(spendingByCategory).length > 0 ? (
-              Object.entries(spendingByCategory).map(([category, amount]) => (
-                <div key={category} className="flex justify-between mb-2 hover:bg-gray-100 p-2 rounded">
-                  <span>{category}</span>
-                  <span className="text-red-600 font-bold">₹{amount.toFixed(2)}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500">No spending data available</p>
-            )}
+            <div className="flex space-x-4">
+              <Link href="/auth/login">
+                <button className="text-gray-700 hover:text-indigo-600 px-4 py-2 rounded-md font-medium">
+                  Login
+                </button>
+              </Link>
+              <Link href="/auth/register">
+                <button className="bg-indigo-600 text-white px-4 py-2 rounded-md font-medium hover:bg-indigo-700">
+                  Get Started
+                </button>
+              </Link>
+            </div>
           </div>
-        </motion.div>
+        </div>
+      </header>
 
-        {categoryChart && (
-          <motion.div 
-            initial={{ x: 100, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white p-6 rounded-xl shadow-md"
-          >
-            <h2 className="text-2xl font-bold mb-4">Category Spending Chart</h2>
-            <img 
-              src={`data:image/png;base64,${categoryChart}`} 
-              alt="Category Spending Chart" 
-              className="w-full max-h-[300px] object-contain"
-            />
-          </motion.div>
-        )}
-      </div>
+      {/* Hero Section */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center">
+          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+            Take Control of Your
+            <span className="text-indigo-600"> Finances</span>
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Track expenses, manage budgets, and achieve your financial goals with our comprehensive finance management platform.
+          </p>
+          <Link href="/auth/register">
+            <button className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-medium text-lg hover:bg-indigo-700 transition-colors">
+              Start Managing Your Money
+            </button>
+          </Link>
+        </div>
 
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="mt-8"
-      >
-        <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
-        {transactions.length > 0 ? (
-          <TransactionList transactions={transactions} />
-        ) : (
-          <div className="bg-white p-6 rounded-xl shadow-md text-center">
-            <p className="text-gray-500">No transactions yet. Add your first transaction above!</p>
+        {/* Features */}
+        <div className="grid md:grid-cols-3 gap-8 mt-16">
+          <div className="text-center p-6 bg-white rounded-lg shadow-md">
+            <TrendingUp className="h-12 w-12 text-indigo-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Expense Tracking</h3>
+            <p className="text-gray-600">Monitor your spending patterns and categorize expenses automatically.</p>
           </div>
-        )}
-      </motion.div>
+          <div className="text-center p-6 bg-white rounded-lg shadow-md">
+            <BarChart3 className="h-12 w-12 text-indigo-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Budget Planning</h3>
+            <p className="text-gray-600">Set budgets and get alerts when you're approaching limits.</p>
+          </div>
+          <div className="text-center p-6 bg-white rounded-lg shadow-md">
+            <Shield className="h-12 w-12 text-indigo-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Secure & Private</h3>
+            <p className="text-gray-600">Your financial data is encrypted and stored securely.</p>
+          </div>
+        </div>
+      </main>
     </div>
-  );
+  )
 }
