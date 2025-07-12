@@ -55,7 +55,7 @@ export default function Home() {
           <div className="text-center p-6 bg-white rounded-lg shadow-md">
             <BarChart3 className="h-12 w-12 text-indigo-600 mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">Budget Planning</h3>
-            <p className="text-gray-600">Set budgets and get alerts when you're approaching limits.</p>
+            <p className="text-gray-600">Set budgets and get alerts when you&apos;re approaching limits.</p>
           </div>
           <div className="text-center p-6 bg-white rounded-lg shadow-md">
             <Shield className="h-12 w-12 text-indigo-600 mx-auto mb-4" />

@@ -1,107 +1,112 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import { Plus, CreditCard, TrendingUp, TrendingDown, Users, Wallet, Eye, EyeOff } from 'lucide-react';
+import { apiService } from '@/lib/api';
+
+// --- TYPE DEFINITIONS (Adjust in your actual types.ts file) ---
+// These should reflect the new backend structure
 
 interface Account {
   id: string;
   name: string;
-  type: 'personal' | 'friends';
-  balance: number;
-  email?: string; // for friend accounts
+  type: 'personal' | 'friend';
+  balance: number; // Backend provides 'balance'
+  // Making these optional as the backend doesn't return them on GET /accounts
+  initial_balance?: number;
+  current_balance: number; // We will map 'balance' to this for compatibility
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  name: string;
-  amount: number;
-  type: 'debit' | 'credit';
-  category: string;
-  account: string;
-  status?: string;
+    id: string;
+    date: string;
+    description: string;
+    place: string; // Changed from 'name' to 'place'
+    amount: number;
+    type: string;
+    category: string;
+    account: string;
+    status: string;
+    to_account?: string;
+    paid_by?: string;
+    created_at: Date;
+    updated_at: Date;
 }
 
-interface Balance {
-  account: string;
-  balance: number;
+// interface User {
+//     id: string;
+//     email: string;
+//     username: string;
+//     full_name: string | null;
+// }
+
+interface CreateTransactionData {
+    date: string;
+    description: string;
+    place: string; // Changed from 'name' to 'place'
+    amount: number;
+    type: 'debit' | 'credit' | 'transferred' | 'debt_incurred';
+    category: string;
+    account: string;
 }
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
+interface CreateAccountData {
+    name: string;
+    type: 'personal' | 'friend';
+    initial_balance: number;
 }
+
 
 const Dashboard = () => {
   const [personalAccounts, setPersonalAccounts] = useState<Account[]>([]);
   const [friendAccounts, setFriendAccounts] = useState<Account[]>([]);
   const [allAccounts, setAllAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [balances, setBalances] = useState<Balance[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  // const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [hideBalances, setHideBalances] = useState(false);
 
-  // New transaction form state
-  const [newTransaction, setNewTransaction] = useState({
+  // New transaction form state - updated 'name' to 'place'
+  const [newTransaction, setNewTransaction] = useState<CreateTransactionData>({
     date: new Date().toISOString().split('T')[0],
     description: '',
-    name: '',
-    amount: '',
-    type: 'debit' as 'debit' | 'credit',
+    place: '', // Changed from name
+    amount: 0,
+    type: 'debit',
     category: '',
     account: ''
   });
 
   // New account form state
-  const [newAccount, setNewAccount] = useState({
+  const [newAccount, setNewAccount] = useState<CreateAccountData>({
     name: '',
-    type: 'personal' as 'personal' | 'friends',
-    initial_balance: '',
-    email: '' // for friend accounts
+    type: 'personal',
+    initial_balance: 0
   });
 
-  // Mock API calls - replace with actual API calls using your token
   const fetchData = async () => {
+    setLoading(true);
     try {
-      // Mock data - replace with actual API calls
-      const mockAccounts: Account[] = [
-        { id: '1', name: 'Wallet', type: 'personal', balance: 5000 },
-        { id: '2', name: 'Bank Account', type: 'personal', balance: 25000 },
-        { id: '3', name: 'Credit Card', type: 'personal', balance: -2000 },
-        { id: '4', name: 'John Doe', type: 'friends', balance: 2000, email: 'john@example.com' }, // You lent ₹2000
-        { id: '5', name: 'Jane Smith', type: 'friends', balance: -1500, email: 'jane@example.com' }, // You owe ₹1500
-        { id: '6', name: 'Mike Johnson', type: 'friends', balance: 500, email: 'mike@example.com' } // You lent ₹500
-      ];
+      // Fetch all data from the API in parallel. No need for getBalances anymore.
+      const [accountsData, transactionsData] = await Promise.all([
+        apiService.getAccounts(),
+        apiService.getTransactions(10), // Fetch latest 10 transactions
+        // apiService.getUsers(),
+      ]);
 
-      const personalAccs = mockAccounts.filter(acc => acc.type === 'personal');
-      const friendAccs = mockAccounts.filter(acc => acc.type === 'friends');
-      
+      // Filter accounts into personal and friend types
+      const personalAccs = accountsData.filter(acc => acc.type === 'personal');
+      const friendAccs = accountsData.filter(acc => acc.type === 'friend');
+
       setPersonalAccounts(personalAccs);
       setFriendAccounts(friendAccs);
-      setAllAccounts(mockAccounts);
-
-      const mockTransactions: Transaction[] = [
-        { id: '1', date: '2025-07-10', description: 'Lunch', name: 'Lunch', amount: 200, type: 'debit', category: 'Food', account: 'Wallet' },
-        { id: '2', date: '2025-07-09', description: 'Salary', name: 'Salary', amount: 50000, type: 'credit', category: 'Income', account: 'Bank Account' },
-        { id: '3', date: '2025-07-08', description: 'Lent money', name: 'Lent to John', amount: 2000, type: 'debit', category: 'Lend', account: 'John Doe' },
-        { id: '4', date: '2025-07-07', description: 'Borrowed money', name: 'Borrowed from Jane', amount: 1500, type: 'credit', category: 'Borrow', account: 'Jane Smith' },
-        { id: '5', date: '2025-07-06', description: 'Coffee', name: 'Coffee Shop', amount: 150, type: 'debit', category: 'Food', account: 'Wallet' },
-        { id: '6', date: '2025-07-05', description: 'Lent money', name: 'Lent to Mike', amount: 500, type: 'debit', category: 'Lend', account: 'Mike Johnson' }
-      ];
-
-      const mockUsers: User[] = [
-        { id: '1', name: 'John Doe', email: 'john@example.com' },
-        { id: '2', name: 'Jane Smith', email: 'jane@example.com' },
-        { id: '3', name: 'Mike Johnson', email: 'mike@example.com' }
-      ];
-
-      setTransactions(mockTransactions);
-      setUsers(mockUsers);
-      setBalances(mockAccounts.map(acc => ({ account: acc.name, balance: acc.balance })));
+      setAllAccounts(accountsData);
+      setTransactions(transactionsData);
+      // setUsers(usersData);
+      
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -116,31 +121,19 @@ const Dashboard = () => {
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Add API call here
-      const transactionData = {
-        ...newTransaction,
-        amount: parseFloat(newTransaction.amount),
-        date: newTransaction.date.split('-').reverse().join('-') // Convert to DD-MM-YYYY
-      };
+      await apiService.createTransaction(newTransaction);
 
-      // Mock adding transaction
-      const newTrans: Transaction = {
-        id: Date.now().toString(),
-        ...transactionData,
-        amount: parseFloat(newTransaction.amount)
-      };
-
-      setTransactions(prev => [newTrans, ...prev.slice(0, 9)]);
       setNewTransaction({
         date: new Date().toISOString().split('T')[0],
         description: '',
-        name: '',
-        amount: '',
+        place: '', // Changed from name
+        amount: 0,
         type: 'debit',
         category: '',
         account: ''
       });
       setShowAddTransaction(false);
+      await fetchData(); // Refresh data
     } catch (error) {
       console.error('Error adding transaction:', error);
     }
@@ -149,45 +142,34 @@ const Dashboard = () => {
   const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Add API call here
-      const accountData = {
-        ...newAccount,
-        initial_balance: parseFloat(newAccount.initial_balance)
-      };
+      await apiService.createAccount(newAccount);
 
-      // Mock adding account
-      const newAcc: Account = {
-        id: Date.now().toString(),
-        name: newAccount.name,
-        type: newAccount.type,
-        balance: parseFloat(newAccount.initial_balance),
-        email: newAccount.type === 'friends' ? newAccount.email : undefined
-      };
-
-      if (newAccount.type === 'personal') {
-        setPersonalAccounts(prev => [...prev, newAcc]);
-      } else {
-        setFriendAccounts(prev => [...prev, newAcc]);
-      }
-      setAllAccounts(prev => [...prev, newAcc]);
-      
       setNewAccount({
         name: '',
         type: 'personal',
-        initial_balance: '',
-        email: ''
+        initial_balance: 0
       });
       setShowAddAccount(false);
+      await fetchData(); // Refresh data
     } catch (error) {
       console.error('Error adding account:', error);
     }
   };
 
+  // Calculations updated to use account.balance
   const personalBalance = personalAccounts.reduce((sum, acc) => sum + acc.balance, 0);
+  console.log('Personal Balance:', personalBalance);
   const totalLent = friendAccounts.filter(acc => acc.balance > 0).reduce((sum, acc) => sum + acc.balance, 0);
+  console.log('totalLent:', totalLent);
   const totalOwed = friendAccounts.filter(acc => acc.balance < 0).reduce((sum, acc) => sum + Math.abs(acc.balance), 0);
+  console.log('totalOwed:', totalOwed);
+  
+  // Note: These income/expense totals are still client-side estimates based on recent transactions.
+  // For accuracy, this logic might move to the backend in the future.
   const totalIncome = transactions.filter(t => t.type === 'credit' && !['Lend', 'Borrow'].includes(t.category)).reduce((sum, t) => sum + t.amount, 0);
+  console.log('totalIncome:', totalIncome);
   const totalExpenses = transactions.filter(t => t.type === 'debit' && !['Lend', 'Borrow'].includes(t.category)).reduce((sum, t) => sum + t.amount, 0);
+  console.log('totalExpenses:', totalExpenses);
 
   if (loading) {
     return (
@@ -203,12 +185,12 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header and Stats Overview (No changes needed here, they use the calculated totals) */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-          <p className="text-gray-600">Welcome back! Here's your financial overview.</p>
+          <p className="text-gray-600">Welcome back! Here&apos;s your financial overview.</p>
         </div>
-
+        
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -300,7 +282,7 @@ const Dashboard = () => {
                     </div>
                     <div>
                       <h3 className="font-medium text-gray-900">{account.name}</h3>
-                      <p className="text-sm text-gray-600 capitalize">{account.type}</p>
+                      {/* <p className="text-sm text-gray-600 capitalize">{account.type}</p> */}
                     </div>
                   </div>
                   <div className="text-right">
@@ -313,7 +295,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Recent Transactions */}
+          {/* Recent Transactions - Changed 'name' to 'place' */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -331,6 +313,7 @@ const Dashboard = () => {
               <div className="space-y-4">
                 {transactions.slice(0, 10).map(transaction => (
                   <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    {/* ... icon logic ... */}
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${
                         transaction.category === 'Lend' ? 'bg-orange-100' :
@@ -347,9 +330,9 @@ const Dashboard = () => {
                         }
                       </div>
                       <div>
-                        <h3 className="font-medium text-gray-900">{transaction.name}</h3>
+                        <h3 className="font-medium text-gray-900">{transaction.place}</h3> {/* CHANGED */}
                         <p className="text-sm text-gray-600">{transaction.category} • {transaction.account}</p>
-                        <p className="text-xs text-gray-500">{transaction.date}</p>
+                        <p className="text-xs text-gray-500">{new Date(transaction.date).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -369,7 +352,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Friends & Balances Section */}
+          {/* Friends & Balances Section - Changed to use 'balance' */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center gap-2">
@@ -389,7 +372,6 @@ const Dashboard = () => {
                       </div>
                       <div>
                         <h3 className="font-medium text-gray-900">{friend.name}</h3>
-                        <p className="text-sm text-gray-600">{friend.email}</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -406,7 +388,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                 ))}
-                
+                {/* ... empty state ... */}
                 {friendAccounts.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <Users size={48} className="mx-auto mb-4 text-gray-300" />
@@ -427,11 +409,11 @@ const Dashboard = () => {
             <h3 className="text-lg font-semibold mb-4">Add New Transaction</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Place / Name</label> {/* CHANGED */}
                 <input
                   type="text"
-                  value={newTransaction.name}
-                  onChange={(e) => setNewTransaction({...newTransaction, name: e.target.value})}
+                  value={newTransaction.place} // CHANGED
+                  onChange={(e) => setNewTransaction({...newTransaction, place: e.target.value})} // CHANGED
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -451,7 +433,7 @@ const Dashboard = () => {
                 <input
                   type="number"
                   value={newTransaction.amount}
-                  onChange={(e) => setNewTransaction({...newTransaction, amount: e.target.value})}
+                  onChange={(e) => setNewTransaction({...newTransaction, amount: Number(e.target.value)})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -523,6 +505,7 @@ const Dashboard = () => {
         </div>
       )}
 
+
       {/* Add Account Modal */}
       {showAddAccount && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -543,11 +526,11 @@ const Dashboard = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
                 <select
                   value={newAccount.type}
-                  onChange={(e) => setNewAccount({...newAccount, type: e.target.value as 'personal' | 'friends'})}
+                  onChange={(e) => setNewAccount({...newAccount, type: e.target.value as 'personal' | 'friend'})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="personal">Personal</option>
-                  <option value="friends">Friends</option>
+                  <option value="friend">Friend</option>
                 </select>
               </div>
               <div>
@@ -555,7 +538,7 @@ const Dashboard = () => {
                 <input
                   type="number"
                   value={newAccount.initial_balance}
-                  onChange={(e) => setNewAccount({...newAccount, initial_balance: e.target.value})}
+                  onChange={(e) => setNewAccount({...newAccount, initial_balance: Number(e.target.value)})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
