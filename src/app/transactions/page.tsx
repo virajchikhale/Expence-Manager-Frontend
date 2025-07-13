@@ -30,16 +30,6 @@ interface Transaction {
     updated_at: Date;
 }
 
-interface CreateTransactionData {
-    date: string;
-    description: string;
-    place: string;
-    amount: number;
-    type: 'debit' | 'credit' | 'transferred' | 'debt_incurred';
-    category: string;
-    account: string;
-}
-
 // --- MAIN DASHBOARD COMPONENT ---
 const Dashboard = () => {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
