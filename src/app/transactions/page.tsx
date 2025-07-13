@@ -67,7 +67,7 @@ const Dashboard = () => {
     const fetchTransactions = useCallback(async (reset = false) => {
         setLoading(true);
         try {
-            const params: Record<string, any> = {
+            const params: Record<string, string | number | string[] | undefined> = {
                 page: reset ? 1 : page,
                 limit: 20,
             };
@@ -92,7 +92,7 @@ const Dashboard = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, debouncedSearchInput, filters]);
+    }, [page, filters]);
 
     useEffect(() => {
         fetchAccounts();
@@ -100,7 +100,7 @@ const Dashboard = () => {
 
     useEffect(() => {
         fetchTransactions(true);
-    }, [filters.searchTerm, filters.dateFrom, filters.dateTo, filters.type, filters.categories, filters.accounts, filters.minAmount, filters.maxAmount]);
+    }, [fetchTransactions, filters.searchTerm, filters.dateFrom, filters.dateTo, filters.type, filters.categories, filters.accounts, filters.minAmount, filters.maxAmount]);
 
     // Update filters.searchTerm only after debounce
     useEffect(() => {
@@ -118,9 +118,9 @@ const Dashboard = () => {
         if (node) observer.current.observe(node);
     }, [loading, hasMore, fetchTransactions]);
 
-    const handleFilterChange = React.useCallback((filterName: string, value: any) => {
+    const handleFilterChange = React.useCallback((filterName: string, value: string | string[]) => {
         if (filterName === 'searchTerm') {
-            setSearchInput(value);
+            setSearchInput(value as string);
         } else {
             setFilters(prev => {
                 const newFilters = { ...prev, [filterName]: value };
@@ -147,20 +147,18 @@ const Dashboard = () => {
         setSearchInput('');
     };
 
-    // Get filtered accounts based on selected transaction type
-    const getFilteredAccounts = () => {
+    // Memoized filtered accounts based on selected transaction type
+    const getFilteredAccounts = React.useCallback(() => {
         if (!filters.type || filters.type.length === 0) {
             // If no type selected, show all accounts
             return allAccounts;
         }
-        
-        const hasPersonalTypes = filters.type.some(type => 
+        const hasPersonalTypes = filters.type.some(type =>
             ['debit', 'credit', 'self_transferred'].includes(type)
         );
-        const hasFriendTypes = filters.type.some(type => 
+        const hasFriendTypes = filters.type.some(type =>
             ['transferred', 'debt_incurred'].includes(type)
         );
-        
         if (hasPersonalTypes && hasFriendTypes) {
             // If both personal and friend type are selected, show all accounts
             return allAccounts;
@@ -171,12 +169,13 @@ const Dashboard = () => {
             // Only friend type selected - show only friend accounts
             return allAccounts.filter(account => account.type === 'friend');
         }
-        
         return allAccounts;
-    };
-    
-    // In a real app, you would get these from your data or a config file
-    const allCategories = ["Food", "Transport", "Entertainment", "Shopping", "Bills", "Income", "Other", "Lend", "Borrow"];
+    }, [filters.type, allAccounts]);
+
+    // Memoized categories
+    const allCategories = React.useMemo(() => [
+        "Food", "Transport", "Entertainment", "Shopping", "Bills", "Income", "Other", "Lend", "Borrow"
+    ], []);
 
     // Check if any filters are active
     const hasActiveFilters = filters.searchTerm || filters.dateFrom || filters.dateTo || filters.type.length > 0 || 

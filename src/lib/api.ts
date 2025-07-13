@@ -168,7 +168,6 @@ class ApiService {
       body: JSON.stringify(transactionData),
     });
   }
-
   async getTransactions(limit?: number): Promise<Transaction[]> {
     const params = limit ? `?limit=${limit}` : '';
     const response = await this.request<TransactionListResponse>(`/api/transactions${params}`);
