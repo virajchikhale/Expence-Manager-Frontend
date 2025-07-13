@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { Plus, CreditCard, TrendingUp, TrendingDown, Users, Wallet, Eye, EyeOff, TrendingUpDown } from 'lucide-react';
+import { Plus, CreditCard, TrendingUp, TrendingDown, Users, Eye, EyeOff, TrendingUpDown } from 'lucide-react';
 import { apiService } from '@/lib/api';
 import Navbar from '../../components/navbar/page'; 
 
