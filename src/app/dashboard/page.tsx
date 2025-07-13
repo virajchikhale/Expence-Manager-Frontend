@@ -1,7 +1,8 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { Plus, CreditCard, TrendingUp, TrendingDown, Users, Wallet, Eye, EyeOff } from 'lucide-react';
+import { Plus, CreditCard, TrendingUp, TrendingDown, Users, Wallet, Eye, EyeOff, TrendingUpDown } from 'lucide-react';
 import { apiService } from '@/lib/api';
+import Navbar from '../../components/navbar/page'; 
 
 // --- TYPE DEFINITIONS (Adjust in your actual types.ts file) ---
 // These should reflect the new backend structure
@@ -49,6 +50,7 @@ interface CreateTransactionData {
     type: 'debit' | 'credit' | 'transferred' | 'debt_incurred';
     category: string;
     account: string;
+    to_account?: string; // Added for transfer transactions
 }
 
 interface CreateAccountData {
@@ -67,17 +69,22 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [showAddAccount, setShowAddAccount] = useState(false);
-  const [hideBalances, setHideBalances] = useState(false);
+  const [hideBalances, setHideBalances] = useState(true);
+  const [accountSearchTerm, setAccountSearchTerm] = useState('');
+  const [toAccountSearchTerm, setToAccountSearchTerm] = useState('');
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+  const [showToAccountDropdown, setShowToAccountDropdown] = useState(false);
 
   // New transaction form state - updated 'name' to 'place'
   const [newTransaction, setNewTransaction] = useState<CreateTransactionData>({
     date: new Date().toISOString().split('T')[0],
     description: '',
-    place: '', // Changed from name
+    place: '',
     amount: 0,
     type: 'debit',
     category: '',
-    account: ''
+    account: '',
+    to_account: ''
   });
 
   // New account form state
@@ -121,12 +128,17 @@ const Dashboard = () => {
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiService.createTransaction(newTransaction);
+      // Only include to_account if it has a value
+      const tx = { ...newTransaction };
+      if (!tx.to_account) {
+        delete tx.to_account;
+      }
+      await apiService.createTransaction(tx);
 
       setNewTransaction({
         date: new Date().toISOString().split('T')[0],
         description: '',
-        place: '', // Changed from name
+        place: '',
         amount: 0,
         type: 'debit',
         category: '',
@@ -138,6 +150,59 @@ const Dashboard = () => {
       console.error('Error adding transaction:', error);
     }
   };
+
+  const getFilteredAccounts = () => {
+  let accountsToShow = [];
+  
+  if (newTransaction.type === 'credit' || newTransaction.type === 'debit') {
+    // Show only personal accounts for credit/debit
+    accountsToShow = allAccounts.filter(account => account.type === 'personal');
+  } else if (newTransaction.type === 'transferred') {
+    // Show only personal accounts for the "from" account in transfers
+    accountsToShow = allAccounts.filter(account => account.type === 'personal');
+  } else {
+    // For debt_incurred, show friends accounts
+    accountsToShow = allAccounts.filter(account => account.type === 'friend');
+  }
+  
+  // Filter by search term
+  return accountsToShow.filter(account =>
+    account.name.toLowerCase().includes(accountSearchTerm.toLowerCase())
+  );
+};
+
+const getFilteredToAccounts = () => {
+  // For "To Account" in transfers, show all accounts
+  return allAccounts.filter(account =>
+    account.name.toLowerCase().includes(toAccountSearchTerm.toLowerCase())
+  );
+};
+
+// Add click outside handler to close dropdowns
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (!(event.target as HTMLElement).closest('.relative')) {
+      setShowAccountDropdown(false);
+      setShowToAccountDropdown(false);
+    }
+  };
+
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => {
+    document.removeEventListener('mousedown', handleClickOutside);
+  };
+}, []);
+
+// Reset form when transaction type changes
+useEffect(() => {
+  setNewTransaction(prev => ({
+    ...prev,
+    account: '',
+    to_account: ''
+  }));
+  setAccountSearchTerm('');
+  setToAccountSearchTerm('');
+}, [newTransaction.type]);
 
   const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,13 +248,23 @@ const Dashboard = () => {
   }
 
   return (
+    <div>
+      <Navbar />
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header and Stats Overview (No changes needed here, they use the calculated totals) */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+        {/* <div className="mb-8">
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+            <button
+              onClick={() => setHideBalances(!hideBalances)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              {hideBalances ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
           <p className="text-gray-600">Welcome back! Here&apos;s your financial overview.</p>
-        </div>
+        </div> */}
         
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -201,16 +276,16 @@ const Dashboard = () => {
                   <p className="text-2xl font-bold text-gray-900">
                     {hideBalances ? '****' : `₹${personalBalance.toLocaleString()}`}
                   </p>
-                  <button
-                    onClick={() => setHideBalances(!hideBalances)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    {hideBalances ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
                 </div>
               </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Wallet className="text-blue-600" size={24} />
+              <div className="p-3 bg-blue-100 rounded-full h-12">
+                {/* <Wallet className="text-blue-600" size={24} /> */}
+                <button
+                  onClick={() => setHideBalances(!hideBalances)}
+                  className="text-blue-400 hover:text-blue-600"
+                >
+                  {hideBalances ? <EyeOff size={24} /> : <Eye size={24} />}
+                </button>
               </div>
             </div>
           </div>
@@ -259,42 +334,6 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Personal Accounts Section */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Personal Accounts</h2>
-                <button
-                  onClick={() => setShowAddAccount(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Plus size={16} />
-                  Add Account
-                </button>
-              </div>
-            </div>
-            <div className="p-6 space-y-4">
-              {personalAccounts.map(account => (
-                <div key={account.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <CreditCard className="text-blue-600" size={20} />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-gray-900">{account.name}</h3>
-                      {/* <p className="text-sm text-gray-600 capitalize">{account.type}</p> */}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-semibold ${account.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {hideBalances ? '****' : `₹${account.balance.toLocaleString()}`}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Recent Transactions - Changed 'name' to 'place' */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
@@ -316,34 +355,42 @@ const Dashboard = () => {
                     {/* ... icon logic ... */}
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${
-                        transaction.category === 'Lend' ? 'bg-orange-100' :
-                        transaction.category === 'Borrow' ? 'bg-purple-100' :
+                        transaction.type === 'transferred' ? 'bg-orange-100' :
+                        transaction.type === 'debt_incurred' ? 'bg-purple-100' :
+                        transaction.type === 'self_transferred' ? 'bg-blue-100' :
                         transaction.type === 'credit' ? 'bg-green-100' : 'bg-red-100'
                       }`}>
-                        {transaction.category === 'Lend' ? 
-                          <TrendingUp className="text-orange-600" size={20} /> :
-                          transaction.category === 'Borrow' ? 
-                          <TrendingDown className="text-purple-600" size={20} /> :
+                        {transaction.type === 'transferred' ? 
+                          <TrendingDown className="text-orange-600" size={20} /> :
+                          transaction.type === 'debt_incurred' ? 
+                          <TrendingUp className="text-purple-600" size={20} /> :
                           transaction.type === 'credit' ? 
                           <TrendingUp className="text-green-600" size={20} /> : 
+                          transaction.type === 'self_transferred' ? 
+                          <TrendingUpDown className="text-blue-600" size={20} /> : 
                           <TrendingDown className="text-red-600" size={20} />
                         }
                       </div>
                       <div>
                         <h3 className="font-medium text-gray-900">{transaction.place}</h3> {/* CHANGED */}
-                        <p className="text-sm text-gray-600">{transaction.category} • {transaction.account}</p>
+                        <p className="text-sm text-gray-600">
+                          {transaction.category} • {transaction.account}
+                          {transaction.to_account && transaction.to_account !== "None" && ` → ${transaction.to_account}`}
+                        </p>
                         <p className="text-xs text-gray-500">{new Date(transaction.date).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className={`font-semibold ${
-                        transaction.category === 'Lend' ? 'text-orange-600' :
-                        transaction.category === 'Borrow' ? 'text-purple-600' :
+                        transaction.type === 'transferred' ? 'text-orange-600' :
+                        transaction.type === 'debt_incurred' ? 'text-purple-600' :
+                        transaction.type === 'self_transferred' ? 'text-blue-600' :
                         transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {transaction.type === 'credit' && transaction.category !== 'Borrow' ? '+' : 
-                         transaction.category === 'Lend' ? '↗' : 
-                         transaction.category === 'Borrow' ? '↙' : '-'}₹{transaction.amount.toLocaleString()}
+                        {transaction.type === 'credit' ? '+ ' : 
+                         transaction.type === 'transferred' ? '↗ ' : 
+                         transaction.type === 'self_transferred' ? '↔ ' : 
+                         transaction.type === 'debt_incurred' ? '↙ ' : '- '}₹{transaction.amount.toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -399,6 +446,42 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+          
+          {/* Personal Accounts Section */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Personal Accounts</h2>
+                <button
+                  onClick={() => setShowAddAccount(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus size={16} />
+                  Add Account
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              {personalAccounts.map(account => (
+                <div key={account.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <CreditCard className="text-blue-600" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-gray-900">{account.name}</h3>
+                      {/* <p className="text-sm text-gray-600 capitalize">{account.type}</p> */}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-semibold ${account.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {hideBalances ? '****' : `₹${account.balance.toLocaleString()}`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -409,15 +492,110 @@ const Dashboard = () => {
             <h3 className="text-lg font-semibold mb-4">Add New Transaction</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Place / Name</label> {/* CHANGED */}
+                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <select
+                  value={newTransaction.type}
+                  onChange={(e) => setNewTransaction({...newTransaction, type: e.target.value as 'debit' | 'credit'})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="debit">Debit</option>
+                  <option value="credit">Credit</option>
+                  <option value="self_transferred">Self Transferred</option>
+                  <option value="transferred">Transferred</option>
+                  <option value="debt_incurred">Debt Incurred</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Account</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={accountSearchTerm}
+                    onChange={(e) => {
+                      setAccountSearchTerm(e.target.value);
+                      setShowAccountDropdown(true);
+                    }}
+                    onFocus={() => setShowAccountDropdown(true)}
+                    placeholder="Search and select account..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  {showAccountDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {getFilteredAccounts().map(account => (
+                        <div
+                          key={account.id}
+                          onClick={() => {
+                            setNewTransaction({...newTransaction, account: account.name});
+                            setAccountSearchTerm(account.name);
+                            setShowAccountDropdown(false);
+                          }}
+                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                        >
+                          {account.name}
+                        </div>
+                      ))}
+                      {getFilteredAccounts().length === 0 && (
+                        <div className="px-3 py-2 text-gray-500">No accounts found</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* To Account - only shown for transferred type */}
+              {newTransaction.type === 'transferred' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">To Account</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={toAccountSearchTerm}
+                      onChange={(e) => {
+                        setToAccountSearchTerm(e.target.value);
+                        setShowToAccountDropdown(true);
+                      }}
+                      onFocus={() => setShowToAccountDropdown(true)}
+                      placeholder="Search and select destination account..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                    {showToAccountDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {getFilteredToAccounts().map(account => (
+                          <div
+                            key={account.id}
+                            onClick={() => {
+                              setNewTransaction({...newTransaction, to_account: account.name});
+                              setToAccountSearchTerm(account.name);
+                              setShowToAccountDropdown(false);
+                            }}
+                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                          >
+                            {account.name}
+                          </div>
+                        ))}
+                        {getFilteredToAccounts().length === 0 && (
+                          <div className="px-3 py-2 text-gray-500">No accounts found</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Place / Name</label>
                 <input
                   type="text"
-                  value={newTransaction.place} // CHANGED
-                  onChange={(e) => setNewTransaction({...newTransaction, place: e.target.value})} // CHANGED
+                  value={newTransaction.place}
+                  onChange={(e) => setNewTransaction({...newTransaction, place: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <input
@@ -428,6 +606,7 @@ const Dashboard = () => {
                   required
                 />
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
                 <input
@@ -438,17 +617,7 @@ const Dashboard = () => {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select
-                  value={newTransaction.type}
-                  onChange={(e) => setNewTransaction({...newTransaction, type: e.target.value as 'debit' | 'credit'})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="debit">Debit</option>
-                  <option value="credit">Credit</option>
-                </select>
-              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <select
@@ -467,20 +636,7 @@ const Dashboard = () => {
                   <option value="Other">Other</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Account</label>
-                <select
-                  value={newTransaction.account}
-                  onChange={(e) => setNewTransaction({...newTransaction, account: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select Account</option>
-                  {allAccounts.map(account => (
-                    <option key={account.id} value={account.name}>{account.name}</option>
-                  ))}
-                </select>
-              </div>
+              
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
@@ -504,7 +660,6 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-
 
       {/* Add Account Modal */}
       {showAddAccount && (
@@ -566,6 +721,7 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };

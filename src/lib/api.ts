@@ -175,6 +175,44 @@ class ApiService {
     return response.transactions; // Extract the nested transactions array
   }
 
+  /**
+   * Fetch filtered transactions using the /api/transactions/filter endpoint.
+   * This method matches the backend API as shown in the provided curl example.
+   * @param filterParams The filter object (page, limit, searchTerm, dateFrom, dateTo, type, categories, accounts, minAmount, maxAmount)
+   */
+  async getTransactionsFilter(filterParams: {
+    page?: number;
+    limit?: number;
+    searchTerm?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    type?: string[];
+    categories?: string[];
+    accounts?: string[];
+    minAmount?: number;
+    maxAmount?: number;
+  }): Promise<Transaction[]> {
+    // Prepare the payload as per backend expectations
+    const payload = {
+      ...filterParams,
+      minAmount: filterParams.minAmount === undefined ? null : filterParams.minAmount,
+      maxAmount: filterParams.maxAmount === undefined ? null : filterParams.maxAmount,
+    };
+    
+    console.log('Fetching transactions with filter:', payload);
+    const response = await this.request<TransactionListResponse>(
+      '/api/transactions/filter',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+    return response.transactions;
+}
+
   async updateTransactionStatus(transactionId: string, status: string): Promise<Transaction> {
     return this.request<Transaction>(`/api/transactions/${transactionId}/status`, {
       method: 'PUT',
