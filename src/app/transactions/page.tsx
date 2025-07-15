@@ -306,19 +306,24 @@ const Dashboard = () => {
                 </button>
             </div>
         );
-    }, [searchInput, filters, handleFilterChange, getFilteredAccounts, allCategories]);
+    }, [searchInput, filters, handleFilterChange, getFilteredAccounts, allCategories, allAccounts]);
 
     // Handler for deleting the latest transaction
     const handleDeleteLatest = async () => {
-        if (!window.confirm('Are you sure you want to delete the latest transaction?')) return;
-        try {
-            await apiService.deleteLatestTransaction();
-            // Refresh the transactions list
-            fetchTransactions(true);
-        } catch (error: any) {
-            alert(error.message || 'Failed to delete transaction');
-        }
+    if (!window.confirm('Are you sure you want to delete the latest transaction?')) return;
+
+    try {
+        await apiService.deleteLatestTransaction();
+        fetchTransactions(true);               // refresh the list
+    } catch (error: unknown) {               // ① don’t use any
+        const message =
+        error instanceof Error               // ② narrow to Error
+            ? error.message
+            : 'Failed to delete transaction';
+        alert(message);
+    }
     };
+
 
     return (
       <div>
