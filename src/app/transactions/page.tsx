@@ -49,6 +49,7 @@ const Dashboard = () => {
         type: [] as string[],
         categories: [] as string[],
         accounts: [] as string[],
+        to_account: [] as string[],
         minAmount: '',
         maxAmount: '',
     });
@@ -77,7 +78,14 @@ const Dashboard = () => {
             if (filters.dateTo) params.dateTo = filters.dateTo;
             if (filters.type && filters.type.length > 0) params.type = filters.type;
             if (filters.categories && filters.categories.length > 0) params.categories = filters.categories;
-            if (filters.accounts && filters.accounts.length > 0) params.accounts = filters.accounts;
+            // If only 'debt_incurred' is selected, use to_account, else use accounts
+            if (
+                filters.type.length === 1 && filters.type[0] === 'transferred'
+            ) {
+                if (filters.to_account && filters.to_account.length > 0) params.to_account = filters.to_account;
+            } else {
+                if (filters.accounts && filters.accounts.length > 0) params.accounts = filters.accounts;
+            }
             if (filters.minAmount) params.minAmount = Number(filters.minAmount);
             if (filters.maxAmount) params.maxAmount = Number(filters.maxAmount);
 
@@ -125,9 +133,10 @@ const Dashboard = () => {
         } else {
             setFilters(prev => {
                 const newFilters = { ...prev, [filterName]: value };
-                // Clear selected accounts when type change to avoid invalid selections
+                // Clear selected accounts/to_account when type changes
                 if (filterName === 'type') {
                     newFilters.accounts = [];
+                    newFilters.to_account = [];
                 }
                 return newFilters;
             });
@@ -142,6 +151,7 @@ const Dashboard = () => {
             type: [],
             categories: [],
             accounts: [],
+            to_account: [],
             minAmount: '',
             maxAmount: '',
         });
@@ -184,6 +194,8 @@ const Dashboard = () => {
                            filters.minAmount || filters.maxAmount;
 
     const FilterSidebar = React.useMemo(() => {
+        // Show 'To Account' filter if only 'debt_incurred' is selected, else show 'Accounts' filter
+        const showToAccount = filters.type.length === 1 && filters.type[0] === 'transferred';
         return (
             <div className="space-y-6">
                 {/* Search Filter */}
@@ -231,16 +243,28 @@ const Dashboard = () => {
                     />
                 </div>
 
-                {/* Account Filter (Multi-select with search) */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Accounts</label>
-                    <SearchableMultiSelectDropdown
-                        options={getFilteredAccounts().map(a => a.name)}
-                        selected={filters.accounts}
-                        onChange={selected => handleFilterChange('accounts', selected)}
-                        placeholder="Select Accounts"
-                    />
-                </div>
+                {/* To Account or Account Filter */}
+                {showToAccount ? (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">To Account</label>
+                        <SearchableMultiSelectDropdown
+                            options={allAccounts.filter(a => a.type === 'friend').map(a => a.name)}
+                            selected={filters.to_account}
+                            onChange={selected => handleFilterChange('to_account', selected)}
+                            placeholder="Select To Account"
+                        />
+                    </div>
+                ) : (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Accounts</label>
+                        <SearchableMultiSelectDropdown
+                            options={getFilteredAccounts().map(a => a.name)}
+                            selected={filters.accounts}
+                            onChange={selected => handleFilterChange('accounts', selected)}
+                            placeholder="Select Accounts"
+                        />
+                    </div>
+                )}
 
                 {/* Category Filter (Multi-select) */}
                 <div>
@@ -284,6 +308,18 @@ const Dashboard = () => {
         );
     }, [searchInput, filters, handleFilterChange, getFilteredAccounts, allCategories]);
 
+    // Handler for deleting the latest transaction
+    const handleDeleteLatest = async () => {
+        if (!window.confirm('Are you sure you want to delete the latest transaction?')) return;
+        try {
+            await apiService.deleteLatestTransaction();
+            // Refresh the transactions list
+            fetchTransactions(true);
+        } catch (error: any) {
+            alert(error.message || 'Failed to delete transaction');
+        }
+    };
+
     return (
       <div>
           <Navbar />
@@ -315,6 +351,15 @@ const Dashboard = () => {
             {/* --- MAIN CONTENT --- */}
             <main className="flex-1 p-4 lg:p-8">
                 <div className="max-w-7xl mx-auto">
+                    {/* --- DELETE LATEST TRANSACTION BUTTON --- */}
+                    <div className="flex justify-end mb-4">
+                        <button
+                            onClick={handleDeleteLatest}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow"
+                        >
+                            Delete Latest Transaction
+                        </button>
+                    </div>
                     {/* --- MOBILE HEADER WITH FILTER BUTTON --- */}
                     <div className="flex items-center justify-between mb-6 lg:hidden">
                         <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>

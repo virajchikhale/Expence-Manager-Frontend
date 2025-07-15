@@ -168,10 +168,32 @@ class ApiService {
       body: JSON.stringify(transactionData),
     });
   }
+
   async getTransactions(limit?: number): Promise<Transaction[]> {
     const params = limit ? `?limit=${limit}` : '';
     const response = await this.request<TransactionListResponse>(`/api/transactions${params}`);
     return response.transactions; // Extract the nested transactions array
+  }
+
+  /**
+   * Delete a transaction by its ID.
+   * @param transactionId The ID of the transaction to delete.
+   */
+  async deleteTransaction(transactionId: string): Promise<void> {
+    return this.request<void>(`/api/transactions/${transactionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Delete the latest (most recently created) transaction.
+   * Fetches the latest transaction and deletes it.
+   */
+  async deleteLatestTransaction(): Promise<void> {
+    const transactions = await this.getTransactions(1); // get the latest transaction only
+    if (transactions.length === 0) throw new Error('No transactions to delete.');
+    const latest = transactions[0];
+    await this.deleteTransaction(latest.id);
   }
 
   /**
