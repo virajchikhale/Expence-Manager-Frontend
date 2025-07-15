@@ -28,6 +28,7 @@ interface Transaction {
     paid_by?: string;
     created_at: Date;
     updated_at: Date;
+    transaction_balance?: number;
 }
 
 // --- MAIN DASHBOARD COMPONENT ---
@@ -343,6 +344,7 @@ const Dashboard = () => {
                                         <th className="p-4 font-semibold whitespace-nowrap">Category</th>
                                         <th className="p-4 font-semibold whitespace-nowrap">Account</th>
                                         <th className="p-4 font-semibold text-right whitespace-nowrap">Amount</th>
+                                        {/* No separate balance column */}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -363,10 +365,15 @@ const Dashboard = () => {
                                                     transaction.type === 'self_transferred' ? 'text-blue-600' :
                                                     transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
                                                   }`}>
-                                                    {transaction.type === 'credit' ? '+ ' : 
-                                                      transaction.type === 'transferred' ? '↗ ' : 
-                                                      transaction.type === 'self_transferred' ? '↔ ' : 
-                                                      transaction.type === 'debt_incurred' ? '↙ ' : '- '}₹{transaction.amount.toLocaleString()}
+                                                    <div>
+                                                        {transaction.type === 'credit' ? '+ ' : 
+                                                          transaction.type === 'transferred' ? '↗ ' : 
+                                                          transaction.type === 'self_transferred' ? '↔ ' : 
+                                                          transaction.type === 'debt_incurred' ? '↙ ' : '- '}₹{transaction.amount.toLocaleString()}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 font-normal mt-1">
+                                                        Bal: ₹{transaction.transaction_balance !== undefined ? transaction.transaction_balance.toLocaleString() : '--'}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );
@@ -391,7 +398,10 @@ const Dashboard = () => {
                                                 <div className="text-sm text-gray-500 truncate">{transaction.description}</div>
                                             </div>
                                             <div className={`font-semibold text-right ml-4 ${transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                                                {transaction.type === 'credit' ? '+' : '-'}₹{transaction.amount.toLocaleString()}
+                                                <div>
+                                                    {transaction.type === 'credit' ? '+' : '-'}₹{transaction.amount.toLocaleString()}
+                                                </div>
+                                                <div className="text-xs text-gray-500 font-normal mt-1">Bal: ₹{transaction.transaction_balance !== undefined ? transaction.transaction_balance.toLocaleString() : '--'}</div>
                                             </div>
                                         </div>
                                         <div className="flex flex-wrap gap-2 text-sm text-gray-600">

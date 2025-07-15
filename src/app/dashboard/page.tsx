@@ -47,7 +47,7 @@ interface CreateTransactionData {
     description: string;
     place: string; // Changed from 'name' to 'place'
     amount: number;
-    type: 'debit' | 'credit' | 'transferred' | 'debt_incurred';
+    type: 'debit' | 'credit' | 'transferred' | 'debt_incurred' | 'self_transferred';
     category: string;
     account: string;
     to_account?: string; // Added for transfer transactions
@@ -160,6 +160,9 @@ const Dashboard = () => {
   } else if (newTransaction.type === 'transferred') {
     // Show only personal accounts for the "from" account in transfers
     accountsToShow = allAccounts.filter(account => account.type === 'personal');
+  } else if (newTransaction.type === 'self_transferred') {
+    // Show only personal accounts for the "from" account in transfers
+    accountsToShow = allAccounts.filter(account => account.type === 'personal');
   } else {
     // For debt_incurred, show friends accounts
     accountsToShow = allAccounts.filter(account => account.type === 'friend');
@@ -172,8 +175,20 @@ const Dashboard = () => {
 };
 
 const getFilteredToAccounts = () => {
+  let toaccountsToShow = [];
+
+  if (newTransaction.type === 'self_transferred') {
+    // Show only personal accounts for the "from" account in transfers
+    toaccountsToShow = allAccounts.filter(account => account.type === 'personal');
+  }else if (newTransaction.type === 'transferred') {
+    // Show only personal accounts for the "from" account in transfers
+    toaccountsToShow = allAccounts.filter(account => account.type === 'friend');
+  } else {
+    // For debt_incurred, show friends accounts
+    toaccountsToShow = allAccounts;
+  }
   // For "To Account" in transfers, show all accounts
-  return allAccounts.filter(account =>
+  return toaccountsToShow.filter(account =>
     account.name.toLowerCase().includes(toAccountSearchTerm.toLowerCase())
   );
 };
@@ -561,7 +576,7 @@ useEffect(() => {
               </div>
 
               {/* To Account - only shown for transferred type */}
-              {newTransaction.type === 'transferred' && (
+              {(newTransaction.type === 'transferred' || newTransaction.type === 'self_transferred') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">To Account</label>
                   <div className="relative">

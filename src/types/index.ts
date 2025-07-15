@@ -51,7 +51,7 @@ export interface Transaction {
   description: string;
   place: string;
   amount: number;
-  type: 'debit' | 'credit' | 'transferred'|"debt_incurred";
+  type: 'debit' | 'credit' | 'transferred'|"debt_incurred" | "self_transferred";
   category: string;
   account: string;
   status: 'Pending' | 'Completed' | 'Failed';
@@ -64,7 +64,7 @@ export interface CreateTransactionData {
   description: string;
   place: string;
   amount: number;
-  type: 'debit' | 'credit' | 'transferred' | 'debt_incurred';
+  type: 'debit' | 'credit' | 'transferred' | 'debt_incurred' | 'self_transferred';
   category: string;
   account: string;
 }
