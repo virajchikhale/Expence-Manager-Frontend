@@ -128,24 +128,26 @@ const Dashboard = () => {
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setShowAddTransaction(false);
       // Only include to_account if it has a value
       const tx = { ...newTransaction };
       if (!tx.to_account) {
         delete tx.to_account;
       }
       await apiService.createTransaction(tx);
+      await fetchData(); // Refresh data
 
       setNewTransaction({
-        date: new Date().toISOString().split('T')[0],
-        description: '',
-        place: '',
-        amount: 0,
-        type: 'debit',
-        category: '',
-        account: ''
+          date: new Date().toISOString().split('T')[0],
+          description: '',
+          place: '',
+          amount: 0,
+          type: 'debit',
+          category: '',
+          account: '',
+          to_account: ''
       });
-      setShowAddTransaction(false);
-      await fetchData(); // Refresh data
+      console.log('Transaction added:', newTransaction);
     } catch (error) {
       console.error('Error adding transaction:', error);
     }
